@@ -133,25 +133,24 @@
             document.getElementById('error-log').textContent = `ERROR: ${message}`;
         }
 
-        // --- SOUND FUNCTION ---
+        // --- SOUND FUNCTION (Hard Beep) ---
         function playBeep() {
-            if (!audioCtx) return; // Don't play if audio context is not initialized
+            if (!audioCtx) return; 
 
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
 
-            oscillator.type = 'sine'; // A softer, more pleasant tone
-            oscillator.frequency.setValueAtTime(660, audioCtx.currentTime); // E5 note, a bit lower
+            oscillator.type = 'square'; // Hard beep sound
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Higher pitch (A5 note)
             
             gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
-            // Fade out over the duration of the sound
-            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
 
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             
             oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.3); // Play for 300ms (longer)
+            oscillator.stop(audioCtx.currentTime + 0.15); // Short duration (150ms)
         }
 
         async function sendDataToSheet(qrData) {
@@ -163,7 +162,7 @@
             const attendanceStatus = document.querySelector('input[name="status"]:checked').value;
             const dataToSend = { ...qrData, status: attendanceStatus };
             
-            statusMessage.innerHTML = `Mencatat Kehadiran:<br><span class="font-bold">${dataToSend.nama} (${dataToSend.Status})</span>`;
+            statusMessage.innerHTML = `Mencatat Kehadiran:<br><span class="font-bold">${dataToSend.nama} (${dataToSend.status})</span>`;
             statusMessage.className = 'text-lg font-medium p-4 rounded-lg transition-all duration-300 status-processing text-center';
 
             try {
@@ -201,12 +200,13 @@
             }
             try {
                 const qrData = JSON.parse(decodedText);
-                if (!qrData.id || !qrData.nama || !qrData.status) throw new Error("Format QR tidak valid.");
+                // Updated validation: check for id and nama only
+                if (!qrData.id || !qrData.nama) throw new Error("Format QR tidak valid. Pastikan berisi ID dan Nama.");
                 sendDataToSheet(qrData);
             } catch (e) {
                 console.error("Invalid QR Code format:", e);
                 lastScannedId = 'error'; 
-                statusMessage.textContent = 'QR Code tidak valid! Pastikan formatnya benar.';
+                statusMessage.textContent = 'QR Code tidak valid! Pastikan berisi ID dan Nama.';
                 statusMessage.className = 'text-lg font-medium p-4 rounded-lg transition-all duration-300 status-error text-center';
                 setTimeout(() => {
                     lastScannedId = null;
@@ -225,7 +225,6 @@
             html5QrCode = new Html5Qrcode("qr-reader");
 
             startScanButton.addEventListener('click', () => {
-                // Initialize AudioContext on first user gesture (required by browsers)
                 if (!audioCtx) {
                     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 }

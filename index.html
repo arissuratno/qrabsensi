@@ -3,79 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Admin Panel</title>
+    <title>Pemindai Absensi QR</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-            background-color: #f4f7fc;
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
-        .login-card {
-            background-color: white;
-            padding: 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        #qr-reader {
+            width: 100%;
+            max-width: 500px;
+            border: 2px solid #4A5568;
+            border-radius: 1rem;
+            overflow: hidden;
+            background-color: #1a202c;
+        }
+        #qr-reader video {
+            width: 100% !important;
+            height: auto !important;
+            border-radius: 0.875rem;
+        }
+        .status-success { background-color: #38A169; }
+        .status-error { background-color: #E53E3E; }
+        .status-processing { background-color: #4299E1; }
+        #error-log {
+            font-family: monospace;
+            font-size: 12px;
+            color: #f56565;
+            background-color: #2d3748;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        /* Styling for custom radio buttons */
+        .radio-label input:checked + .radio-custom {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+        }
+        .radio-label input:checked + .radio-custom span {
+            color: white;
         }
     </style>
 </head>
-<body class="flex items-center justify-center h-screen">
-    <div class="w-full max-w-md">
-        <div class="login-card">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Admin Login</h2>
-            <form id="loginForm">
-                <div class="mb-4">
-                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                    <input type="text" id="username" name="username" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="mb-6">
-                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div id="errorMessage" class="mb-4 text-center text-sm text-red-600"></div>
-                <div>
-                    <button type="submit" id="loginButton" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
-                        Login
-                    </button>
-                </div>
-            </form>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-lg text-center">
+        <h1 class="text-3xl font-bold tracking-tight">Absensi QR Code</h1>
+        <div class="my-4">
+            <p id="date-display" class="text-gray-300"></p>
+            <p id="time-display" class="text-4xl font-bold"></p>
         </div>
+
+        <!-- QR Code Scanner will be rendered here -->
+        <div id="qr-reader" class="mx-auto shadow-lg flex items-center justify-center min-h-[250px]">
+            <button id="start-scan-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">
+                Mulai Pindai
+            </button>
+        </div>
+        
+        <!-- Status Input -->
+        <div id="status-input-container" class="my-4">
+            <div class="flex justify-center space-x-2 sm:space-x-4">
+                <label class="radio-label cursor-pointer">
+                    <input type="radio" name="status" value="H" class="sr-only" checked>
+                    <div class="radio-custom border border-gray-600 rounded-lg px-3 py-2 transition-all duration-200">
+                        <span class="font-semibold text-gray-300">Hadir</span>
+                    </div>
+                </label>
+                <label class="radio-label cursor-pointer">
+                    <input type="radio" name="status" value="I" class="sr-only">
+                    <div class="radio-custom border border-gray-600 rounded-lg px-3 py-2 transition-all duration-200">
+                        <span class="font-semibold text-gray-300">Izin</span>
+                    </div>
+                </label>
+                <label class="radio-label cursor-pointer">
+                    <input type="radio" name="status" value="S" class="sr-only">
+                    <div class="radio-custom border border-gray-600 rounded-lg px-3 py-2 transition-all duration-200">
+                        <span class="font-semibold text-gray-300">Sakit</span>
+                    </div>
+                </label>
+                 <label class="radio-label cursor-pointer">
+                    <input type="radio" name="status" value="A" class="sr-only">
+                    <div class="radio-custom border border-gray-600 rounded-lg px-3 py-2 transition-all duration-200">
+                        <span class="font-semibold text-gray-300">Alpa</span>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Status and Result Display -->
+        <div id="status-container" class="mt-2 w-full min-h-[6rem] flex items-center justify-center">
+             <div id="status-message" class="text-lg font-medium p-4 rounded-lg transition-all duration-300 text-center">
+                Klik "Mulai Pindai" untuk menyalakan kamera.
+             </div>
+        </div>
+        
+        <!-- Technical Error Log -->
+        <div id="error-log" class="hidden"></div>
     </div>
 
+    <!-- The QR Code Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
-        const loginForm = document.getElementById('loginForm');
-        const errorMessageDiv = document.getElementById('errorMessage');
-        const loginButton = document.getElementById('loginButton');
+        // --- CONFIGURATION ---
+        const SPREADSHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz8wOf4Eo-YhVCAu0JTwZXpM-E4Ja4kphFMFNEbMbxNJKLm9lgmTSakVbxxa7tBjQQ6eA/exec';
 
-        loginForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            errorMessageDiv.textContent = '';
-            loginButton.disabled = true;
-            loginButton.textContent = 'Memproses...';
+        // DOM Elements
+        const timeDisplay = document.getElementById('time-display');
+        const dateDisplay = document.getElementById('date-display');
+        const statusMessage = document.getElementById('status-message');
+        const startScanButton = document.getElementById('start-scan-button');
+        
+        let lastScannedId = null;
+        let isProcessing = false;
+        let html5QrCode = null;
+        let audioCtx = null; // AudioContext for sound effects
 
-            const formData = new FormData(loginForm);
-            const data = Object.fromEntries(formData.entries());
+        function updateClock() {
+            const now = new Date();
+            timeDisplay.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':');
+            dateDisplay.textContent = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function logError(message) {
+            document.getElementById('error-log').classList.remove('hidden');
+            document.getElementById('error-log').textContent = `ERROR: ${message}`;
+        }
+
+        // --- SOUND FUNCTION ---
+        function playBeep() {
+            if (!audioCtx) return; // Don't play if audio context is not initialized
+
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'sine'; // A softer, more pleasant tone
+            oscillator.frequency.setValueAtTime(660, audioCtx.currentTime); // E5 note, a bit lower
+            
+            gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            // Fade out over the duration of the sound
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.3); // Play for 300ms (longer)
+        }
+
+        async function sendDataToSheet(qrData) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            playBeep(); // Play sound immediately for instant feedback
+
+            const attendanceStatus = document.querySelector('input[name="status"]:checked').value;
+            const dataToSend = { ...qrData, status: attendanceStatus };
+            
+            statusMessage.innerHTML = `Mencatat Kehadiran:<br><span class="font-bold">${dataToSend.nama} (${dataToSend.Status})</span>`;
+            statusMessage.className = 'text-lg font-medium p-4 rounded-lg transition-all duration-300 status-processing text-center';
 
             try {
-                const response = await fetch('login.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                const response = await fetch(SPREADSHEET_WEB_APP_URL, {
+                    method: 'POST', mode: 'cors', cache: 'no-cache',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(dataToSend)
                 });
-
                 const result = await response.json();
 
-                if (result.status === 'sukses') {
-                    window.location.href = 'index.html';
+                if (result.status === 'success') {
+                    statusMessage.innerHTML = `Sukses! <br><span class="font-bold">${result.data.nama}</span> dicatat ${result.data.status} pukul ${result.data.time}.`;
+                    statusMessage.className = 'text-lg font-medium p-4 rounded-lg transition-all duration-300 status-success text-center';
+                    lastScannedId = qrData.id;
                 } else {
-                    errorMessageDiv.textContent = result.message || 'Username atau password salah.';
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                statusMessage.textContent = `Gagal: ${error.message}`;
+                statusMessage.className = 'text-lg font-medium p-4 rounded-lg transition-all duration-300 status-error text-center';
+            } finally {
+                setTimeout(() => {
+                    isProcessing = false;
+                    lastScannedId = null; 
+                    statusMessage.textContent = 'Arahkan QR Code ke kamera';
+                    statusMessage.className = 'text-lg font-medium p-4 rounded-lg transition-all duration-300 text-center';
+                }, 3000); 
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            if (isProcessing || decodedText === lastScannedId) {
+                return;
+            }
+            try {
+                const qrData = JSON.parse(decodedText);
+                if (!qrData.id || !qrData.nama || !qrData.status) throw new Error("Format QR tidak valid.");
+                sendDataToSheet(qrData);
+            } catch (e) {
+                console.error("Invalid QR Code format:", e);
+                lastScannedId = 'error'; 
+                statusMessage.textContent = 'QR Code tidak valid! Pastikan formatnya benar.';
+                statusMessage.className = 'text-lg font-medium p-4 rounded-lg transition-all duration-300 status-error text-center';
+                setTimeout(() => {
+                    lastScannedId = null;
+                    statusMessage.textContent = 'Arahkan QR Code ke kamera';
+                    statusMessage.className = 'text-lg font-medium p-4 rounded-lg transition-all duration-300 text-center';
+                }, 3000);
+            }
+        }
+
+        function onScanFailure(error) { /* Ignored */ }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            html5QrCode = new Html5Qrcode("qr-reader");
+
+            startScanButton.addEventListener('click', () => {
+                // Initialize AudioContext on first user gesture (required by browsers)
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 }
 
-            } catch (error) {
-                errorMessageDiv.textContent = 'Terjadi kesalahan jaringan. Coba lagi.';
-            } finally {
-                loginButton.disabled = false;
-                loginButton.textContent = 'Login';
-            }
+                startScanButton.classList.add('hidden');
+                document.getElementById('status-input-container').classList.remove('hidden');
+                statusMessage.textContent = 'Meminta izin kamera...';
+
+                const qrboxFunction = (w, h) => ({ width: Math.floor(Math.min(w, h) * 0.7), height: Math.floor(Math.min(w, h) * 0.7) });
+
+                Html5Qrcode.getCameras().then(cameras => {
+                    if (cameras && cameras.length) {
+                        let cameraId = cameras.find(c => c.label.toLowerCase().includes('back'))?.id || cameras[0].id;
+                        html5QrCode.start(cameraId, { fps: 10, qrbox: qrboxFunction }, onScanSuccess, onScanFailure)
+                            .then(() => statusMessage.textContent = 'Arahkan QR Code ke kamera')
+                            .catch(err => {
+                                logError(`Tidak bisa memulai kamera: ${err}`);
+                                statusMessage.textContent = 'Gagal memulai kamera.';
+                            });
+                    } else {
+                        logError("Tidak ada kamera yang ditemukan.");
+                        statusMessage.textContent = 'Tidak ada kamera terdeteksi.';
+                    }
+                }).catch(err => {
+                    logError(`Gagal akses kamera: ${err}`);
+                    statusMessage.textContent = 'Gagal mendapatkan akses kamera.';
+                });
+            });
         });
     </script>
 </body>
